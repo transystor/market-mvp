@@ -1,0 +1,6 @@
+@MarketMvp.ClientService_HostAddress = http://localhost:5298
+
+GET {{MarketMvp.ClientService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

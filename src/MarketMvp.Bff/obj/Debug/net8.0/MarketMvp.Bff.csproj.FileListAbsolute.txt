@@ -32,3 +32,4 @@
 /root/.openclaw/workspace/market-mvp/src/MarketMvp.Bff/obj/Debug/net8.0/MarketMvp.Bff.pdb
 /root/.openclaw/workspace/market-mvp/src/MarketMvp.Bff/obj/Debug/net8.0/MarketMvp.Bff.genruntimeconfig.cache
 /root/.openclaw/workspace/market-mvp/src/MarketMvp.Bff/obj/Debug/net8.0/ref/MarketMvp.Bff.dll
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Bff/obj/Debug/net8.0/MarketMvp.Bff.sourcelink.json

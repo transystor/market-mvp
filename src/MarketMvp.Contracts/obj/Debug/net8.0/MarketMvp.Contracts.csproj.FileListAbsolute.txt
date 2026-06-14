@@ -9,3 +9,4 @@
 /root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/refint/MarketMvp.Contracts.dll
 /root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.pdb
 /root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/ref/MarketMvp.Contracts.dll
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.sourcelink.json

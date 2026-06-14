@@ -1,9 +1,51 @@
 services:
+  client-service:
+    build:
+      context: .
+      dockerfile: src/MarketMvp.ClientService/Dockerfile
+    container_name: market-mvp-client-service
+    ports:
+      - "5101:8080"
+
+  portfolio-service:
+    build:
+      context: .
+      dockerfile: src/MarketMvp.PortfolioService/Dockerfile
+    container_name: market-mvp-portfolio-service
+    ports:
+      - "5102:8080"
+
+  instrument-service:
+    build:
+      context: .
+      dockerfile: src/MarketMvp.InstrumentService/Dockerfile
+    container_name: market-mvp-instrument-service
+    ports:
+      - "5103:8080"
+
+  price-service:
+    build:
+      context: .
+      dockerfile: src/MarketMvp.PriceProjectionService/Dockerfile
+    container_name: market-mvp-price-service
+    ports:
+      - "5104:8080"
+
   bff:
     build:
       context: .
       dockerfile: src/MarketMvp.Bff/Dockerfile
     container_name: market-mvp-bff
+    depends_on:
+      - client-service
+      - portfolio-service
+      - instrument-service
+      - price-service
+    environment:
+      CLIENT_SERVICE_URL: http://client-service:8080
+      PORTFOLIO_SERVICE_URL: http://portfolio-service:8080
+      INSTRUMENT_SERVICE_URL: http://instrument-service:8080
+      PRICE_SERVICE_URL: http://price-service:8080
     ports:
       - "5032:8080"
 

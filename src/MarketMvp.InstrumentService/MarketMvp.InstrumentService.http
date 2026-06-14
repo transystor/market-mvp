@@ -1,0 +1,6 @@
+@MarketMvp.InstrumentService_HostAddress = http://localhost:5207
+
+GET {{MarketMvp.InstrumentService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

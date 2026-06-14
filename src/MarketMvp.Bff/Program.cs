@@ -2,7 +2,6 @@ using MarketMvp.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
@@ -15,6 +14,26 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddHttpClient("clients", client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("CLIENT_SERVICE_URL") ?? "http://client-service:8080");
+});
+
+builder.Services.AddHttpClient("portfolio", client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PORTFOLIO_SERVICE_URL") ?? "http://portfolio-service:8080");
+});
+
+builder.Services.AddHttpClient("instruments", client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("INSTRUMENT_SERVICE_URL") ?? "http://instrument-service:8080");
+});
+
+builder.Services.AddHttpClient("prices", client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PRICE_SERVICE_URL") ?? "http://price-service:8080");
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -24,101 +43,104 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
-app.UseAuthorization();
 
-var now = DateTime.UtcNow;
-
-var clients = new[]
+app.MapGet("/ui/clients", async (IHttpClientFactory httpClientFactory) =>
 {
-    new UiClientDto(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Иван Петров"),
-    new UiClientDto(Guid.Parse("22222222-2222-2222-2222-222222222222"), "Мария Соколова"),
-    new UiClientDto(Guid.Parse("33333333-3333-3333-3333-333333333333"), "Алексей Воронов")
-};
-
-var accountsByClient = new Dictionary<Guid, UiAccountDto[]>
-{
-    [Guid.Parse("11111111-1111-1111-1111-111111111111")] =
-    [
-        new UiAccountDto(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"), "ACC-10001"),
-        new UiAccountDto(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"), "ACC-10002")
-    ],
-    [Guid.Parse("22222222-2222-2222-2222-222222222222")] =
-    [
-        new UiAccountDto(Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1"), "ACC-20001")
-    ],
-    [Guid.Parse("33333333-3333-3333-3333-333333333333")] =
-    [
-        new UiAccountDto(Guid.Parse("cccccccc-cccc-cccc-cccc-ccccccccccc1"), "ACC-30001")
-    ]
-};
-
-var instruments = new[]
-{
-    new UiInstrumentDetailsDto(Guid.Parse("f1111111-1111-1111-1111-111111111111"), "AAPL", "Apple Inc.", "Stock", "USD", 213.42m, now.AddSeconds(-3), "NASDAQ", "US0378331005"),
-    new UiInstrumentDetailsDto(Guid.Parse("f2222222-2222-2222-2222-222222222222"), "MSFT", "Microsoft Corp.", "Stock", "USD", 487.11m, now.AddSeconds(-2), "NASDAQ", "US5949181045"),
-    new UiInstrumentDetailsDto(Guid.Parse("f3333333-3333-3333-3333-333333333333"), "NVDA", "NVIDIA Corp.", "Stock", "USD", 1288.55m, now.AddSeconds(-1), "NASDAQ", "US67066G1040"),
-    new UiInstrumentDetailsDto(Guid.Parse("f4444444-4444-4444-4444-444444444444"), "GAZP", "Газпром", "Stock", "RUB", 173.34m, now.AddSeconds(-4), "MOEX", "RU0007661625"),
-    new UiInstrumentDetailsDto(Guid.Parse("f5555555-5555-5555-5555-555555555555"), "SBER", "Сбербанк", "Stock", "RUB", 319.80m, now.AddSeconds(-5), "MOEX", "RU0009029540")
-};
-
-var positionsByAccount = new Dictionary<Guid, UiAccountPositionDto[]>
-{
-    [Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1")] =
-    [
-        new UiAccountPositionDto(Guid.Parse("f1111111-1111-1111-1111-111111111111"), "AAPL", "Apple Inc.", 15, 180.25m, new DateOnly(2026, 5, 14), 213.42m, now.AddSeconds(-3)),
-        new UiAccountPositionDto(Guid.Parse("f3333333-3333-3333-3333-333333333333"), "NVDA", "NVIDIA Corp.", 4, 1042.10m, new DateOnly(2026, 4, 28), 1288.55m, now.AddSeconds(-1))
-    ],
-    [Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2")] =
-    [
-        new UiAccountPositionDto(Guid.Parse("f4444444-4444-4444-4444-444444444444"), "GAZP", "Газпром", 500, 168.70m, new DateOnly(2026, 3, 17), 173.34m, now.AddSeconds(-4)),
-        new UiAccountPositionDto(Guid.Parse("f5555555-5555-5555-5555-555555555555"), "SBER", "Сбербанк", 250, 301.15m, new DateOnly(2026, 2, 8), 319.80m, now.AddSeconds(-5))
-    ],
-    [Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1")] =
-    [
-        new UiAccountPositionDto(Guid.Parse("f2222222-2222-2222-2222-222222222222"), "MSFT", "Microsoft Corp.", 8, 433.33m, new DateOnly(2026, 1, 26), 487.11m, now.AddSeconds(-2))
-    ],
-    [Guid.Parse("cccccccc-cccc-cccc-cccc-ccccccccccc1")] =
-    [
-        new UiAccountPositionDto(Guid.Parse("f1111111-1111-1111-1111-111111111111"), "AAPL", "Apple Inc.", 5, 199.95m, new DateOnly(2026, 6, 1), 213.42m, now.AddSeconds(-3)),
-        new UiAccountPositionDto(Guid.Parse("f5555555-5555-5555-5555-555555555555"), "SBER", "Сбербанк", 120, 309.40m, new DateOnly(2026, 5, 29), 319.80m, now.AddSeconds(-5))
-    ]
-};
-
-app.MapGet("/ui/clients", () => Results.Ok(clients));
-
-app.MapGet("/ui/clients/{clientId:guid}/accounts", (Guid clientId) =>
-{
-    return accountsByClient.TryGetValue(clientId, out var accounts)
-        ? Results.Ok(accounts)
-        : Results.NotFound();
+    var client = httpClientFactory.CreateClient("clients");
+    var result = await client.GetFromJsonAsync<ClientDto[]>("/clients");
+    return result is null ? Results.Problem("Clients service returned no data") : Results.Ok(result.Select(x => new UiClientDto(x.Id, x.Name)));
 });
 
-app.MapGet("/ui/accounts/{accountId:guid}/positions", (Guid accountId) =>
+app.MapGet("/ui/clients/{clientId:guid}/accounts", async (Guid clientId, IHttpClientFactory httpClientFactory) =>
 {
-    return positionsByAccount.TryGetValue(accountId, out var positions)
-        ? Results.Ok(positions)
-        : Results.NotFound();
+    var client = httpClientFactory.CreateClient("portfolio");
+    var result = await client.GetFromJsonAsync<AccountDto[]>($"/clients/{clientId}/accounts");
+    return result is null
+        ? Results.Problem("Portfolio service returned no accounts")
+        : Results.Ok(result.Select(x => new UiAccountDto(x.Id, x.AccountNumber)));
 });
 
-app.MapGet("/ui/instruments", () =>
+app.MapGet("/ui/accounts/{accountId:guid}/positions", async (Guid accountId, IHttpClientFactory httpClientFactory) =>
 {
-    var result = instruments
-        .Select(x => new UiInstrumentListItemDto(
-            x.InstrumentId,
-            x.Ticker,
-            x.Name,
-            x.Type,
-            x.Currency,
-            x.MarketPrice,
-            x.LastUpdatedAtUtc));
+    var portfolioClient = httpClientFactory.CreateClient("portfolio");
+    var instrumentClient = httpClientFactory.CreateClient("instruments");
+    var priceClient = httpClientFactory.CreateClient("prices");
+
+    var positions = await portfolioClient.GetFromJsonAsync<PortfolioPositionDto[]>($"/accounts/{accountId}/positions") ?? [];
+    var instruments = await instrumentClient.GetFromJsonAsync<InstrumentDto[]>("/instruments") ?? [];
+    var prices = await priceClient.GetFromJsonAsync<MarketPriceDto[]>("/prices") ?? [];
+
+    var instrumentMap = instruments.ToDictionary(x => x.InstrumentId);
+    var priceMap = prices.ToDictionary(x => x.InstrumentId);
+
+    var result = positions.Select(position =>
+    {
+        var instrument = instrumentMap[position.InstrumentId];
+        var price = priceMap[position.InstrumentId];
+
+        return new UiAccountPositionDto(
+            position.InstrumentId,
+            instrument.Ticker,
+            instrument.Name,
+            position.Quantity,
+            position.AveragePrice,
+            position.PurchaseDate,
+            price.MarketPrice,
+            price.LastUpdatedAtUtc);
+    });
 
     return Results.Ok(result);
 });
 
-app.MapGet("/ui/instruments/{instrumentId:guid}", (Guid instrumentId) =>
+app.MapGet("/ui/instruments", async (IHttpClientFactory httpClientFactory) =>
 {
-    var instrument = instruments.FirstOrDefault(x => x.InstrumentId == instrumentId);
-    return instrument is null ? Results.NotFound() : Results.Ok(instrument);
+    var instrumentClient = httpClientFactory.CreateClient("instruments");
+    var priceClient = httpClientFactory.CreateClient("prices");
+
+    var instruments = await instrumentClient.GetFromJsonAsync<InstrumentDto[]>("/instruments") ?? [];
+    var prices = await priceClient.GetFromJsonAsync<MarketPriceDto[]>("/prices") ?? [];
+    var priceMap = prices.ToDictionary(x => x.InstrumentId);
+
+    var result = instruments.Select(instrument =>
+    {
+        var price = priceMap[instrument.InstrumentId];
+
+        return new UiInstrumentListItemDto(
+            instrument.InstrumentId,
+            instrument.Ticker,
+            instrument.Name,
+            instrument.Type,
+            instrument.Currency,
+            price.MarketPrice,
+            price.LastUpdatedAtUtc);
+    });
+
+    return Results.Ok(result);
+});
+
+app.MapGet("/ui/instruments/{instrumentId:guid}", async (Guid instrumentId, IHttpClientFactory httpClientFactory) =>
+{
+    var instrumentClient = httpClientFactory.CreateClient("instruments");
+    var priceClient = httpClientFactory.CreateClient("prices");
+
+    var instrument = await instrumentClient.GetFromJsonAsync<InstrumentDto>($"/instruments/{instrumentId}");
+    var price = await priceClient.GetFromJsonAsync<MarketPriceDto>($"/prices/{instrumentId}");
+
+    if (instrument is null || price is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(new UiInstrumentDetailsDto(
+        instrument.InstrumentId,
+        instrument.Ticker,
+        instrument.Name,
+        instrument.Type,
+        instrument.Currency,
+        price.MarketPrice,
+        price.LastUpdatedAtUtc,
+        instrument.Exchange,
+        instrument.Isin));
 });
 
 app.Run();
