@@ -1,0 +1,18 @@
+services:
+  bff:
+    build:
+      context: .
+      dockerfile: src/MarketMvp.Bff/Dockerfile
+    container_name: market-mvp-bff
+    ports:
+      - "5032:8080"
+
+  ui:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    container_name: market-mvp-ui
+    depends_on:
+      - bff
+    ports:
+      - "5173:80"

@@ -18,27 +18,31 @@
 
 Сейчас данные пока seeded/mock, чтобы быстро получить end-to-end витрину.
 
-## Запуск BFF
+## Запуск через Docker
 
+```bash
+docker compose up --build
+```
+
+После старта будет доступно:
+- UI: `http://localhost:5173`
+- BFF API: `http://localhost:5032`
+- Swagger: `http://localhost:5032/swagger`
+
+## Локальный запуск без Docker
+
+### BFF
 ```bash
 cd src/MarketMvp.Bff
 dotnet run
 ```
 
-По умолчанию API будет доступен примерно на:
-- `http://localhost:5032`
-- `https://localhost:7032`
-
-## Запуск UI
-
+### UI
 ```bash
 cd ui
 npm install
 npm run dev
 ```
-
-По умолчанию Vite UI будет доступен на:
-- `http://localhost:5173`
 
 ## Следующие шаги
 
