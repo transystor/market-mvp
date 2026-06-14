@@ -1,0 +1,8 @@
+bin/
+obj/
+node_modules/
+ui/dist/
+.vs/
+.idea/
+*.user
+*.suo
