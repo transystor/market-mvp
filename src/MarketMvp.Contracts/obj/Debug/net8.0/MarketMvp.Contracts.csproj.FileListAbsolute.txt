@@ -1,0 +1,11 @@
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/bin/Debug/net8.0/MarketMvp.Contracts.deps.json
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/bin/Debug/net8.0/MarketMvp.Contracts.dll
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/bin/Debug/net8.0/MarketMvp.Contracts.pdb
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.GeneratedMSBuildEditorConfig.editorconfig
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.AssemblyInfoInputs.cache
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.AssemblyInfo.cs
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.csproj.CoreCompileInputs.cache
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.dll
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/refint/MarketMvp.Contracts.dll
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/MarketMvp.Contracts.pdb
+/root/.openclaw/workspace/market-mvp/src/MarketMvp.Contracts/obj/Debug/net8.0/ref/MarketMvp.Contracts.dll

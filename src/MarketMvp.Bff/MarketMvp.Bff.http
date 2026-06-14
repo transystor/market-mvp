@@ -1,0 +1,6 @@
+@MarketMvp.Bff_HostAddress = http://localhost:5039
+
+GET {{MarketMvp.Bff_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
