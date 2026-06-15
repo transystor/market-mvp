@@ -1,3 +1,4 @@
+using MarketMvp.Bff;
 using MarketMvp.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,12 +73,7 @@ app.MapGet("/ui/accounts/{accountId:guid}/summary", async (Guid accountId, IHttp
         return Results.NotFound();
     }
 
-    return Results.Ok(new UiAccountSummaryDto(
-        summary.AccountId,
-        summary.TotalMarketValue,
-        summary.TotalUnrealizedPnl,
-        summary.PositionsCount,
-        summary.UpdatedAtUtc));
+    return Results.Ok(summary.ToUiDto());
 });
 
 app.MapGet("/ui/accounts/{accountId:guid}/positions", async (Guid accountId, IHttpClientFactory httpClientFactory) =>
@@ -90,18 +86,7 @@ app.MapGet("/ui/accounts/{accountId:guid}/positions", async (Guid accountId, IHt
         return Results.NotFound();
     }
 
-    var result = snapshot.Positions.Select(position => new UiAccountPositionDto(
-        position.InstrumentId,
-        position.Ticker,
-        position.InstrumentName,
-        position.Quantity,
-        position.AveragePrice,
-        position.PurchaseDate,
-        position.MarketPrice,
-        position.MarketValue,
-        position.UnrealizedPnl,
-        position.UnrealizedPnlPercent,
-        position.LastUpdatedAtUtc));
+    var result = snapshot.Positions.Select(position => position.ToUiDto());
 
     return Results.Ok(result);
 });
@@ -119,14 +104,7 @@ app.MapGet("/ui/instruments", async (IHttpClientFactory httpClientFactory) =>
     {
         var price = priceMap[instrument.InstrumentId];
 
-        return new UiInstrumentListItemDto(
-            instrument.InstrumentId,
-            instrument.Ticker,
-            instrument.Name,
-            instrument.Type,
-            instrument.Currency,
-            price.MarketPrice,
-            price.LastUpdatedAtUtc);
+        return instrument.ToUiListItemDto(price);
     });
 
     return Results.Ok(result);
@@ -145,16 +123,7 @@ app.MapGet("/ui/instruments/{instrumentId:guid}", async (Guid instrumentId, IHtt
         return Results.NotFound();
     }
 
-    return Results.Ok(new UiInstrumentDetailsDto(
-        instrument.InstrumentId,
-        instrument.Ticker,
-        instrument.Name,
-        instrument.Type,
-        instrument.Currency,
-        price.MarketPrice,
-        price.LastUpdatedAtUtc,
-        instrument.Exchange,
-        instrument.Isin));
+    return Results.Ok(instrument.ToUiDetailsDto(price));
 });
 
 app.Run();

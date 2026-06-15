@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Confluent.Kafka;
 using MarketMvp.Contracts;
+using MarketMvp.MarketDataIngestor.TickGeneration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ var autoTickEnabled = (Environment.GetEnvironmentVariable("AUTO_TICK_ENABLED") ?
 var autoTickIntervalSeconds = int.TryParse(Environment.GetEnvironmentVariable("AUTO_TICK_INTERVAL_SECONDS"), out var parsedInterval)
     ? Math.Max(1, parsedInterval)
     : 3;
+var strategyName = Environment.GetEnvironmentVariable("AUTO_TICK_STRATEGY") ?? "random-walk";
 const string topic = "market.price-ticks";
 
 var producerConfig = new ProducerConfig
@@ -35,7 +37,15 @@ var priceState = new ConcurrentDictionary<Guid, SimulatedPriceTickDto>(new[]
 
 builder.Services.AddSingleton(priceState);
 builder.Services.AddSingleton(producerConfig);
-builder.Services.AddSingleton(new AutoTickerOptions(topic, autoTickEnabled, autoTickIntervalSeconds));
+builder.Services.AddSingleton<ITickGenerationStrategy, RandomWalkTickGenerationStrategy>();
+builder.Services.AddSingleton<ITickGenerationStrategy, TrendUpTickGenerationStrategy>();
+builder.Services.AddSingleton<ITickGenerationStrategy, VolatileTickGenerationStrategy>();
+builder.Services.AddSingleton<TickGenerationStrategyFactory>();
+builder.Services.AddSingleton(sp =>
+{
+    var factory = sp.GetRequiredService<TickGenerationStrategyFactory>();
+    return new AutoTickerOptions(topic, autoTickEnabled, autoTickIntervalSeconds, factory.Create(strategyName), factory.GetAvailableNames());
+});
 builder.Services.AddHostedService<AutoTickWorker>();
 
 var app = builder.Build();
@@ -45,78 +55,84 @@ app.UseSwaggerUI();
 
 app.MapGet("/ticks", () => Results.Ok(priceState.Values.OrderBy(x => x.Ticker)));
 
-app.MapPost("/simulate-tick", async (ConcurrentDictionary<Guid, SimulatedPriceTickDto> state, ProducerConfig config) =>
+app.MapGet("/tick-strategies", (AutoTickerOptions options) => Results.Ok(new
+{
+    Current = options.Strategy.Name,
+    Available = options.AvailableStrategyNames
+}));
+
+app.MapPost("/simulate-tick", async (
+    ConcurrentDictionary<Guid, SimulatedPriceTickDto> state,
+    ProducerConfig config,
+    AutoTickerOptions options) =>
 {
     using var producer = new ProducerBuilder<string, string>(config).Build();
-    return await TickPublisher.ProduceRandomTickAsync(state, producer, random, topic, CancellationToken.None);
+    return await TickPublisher.ProduceTickAsync(state, producer, random, topic, options.Strategy, CancellationToken.None);
 });
 
 app.Run();
 
 static class TickPublisher
 {
-    public static async Task<IResult> ProduceRandomTickAsync(
+    public static async Task<IResult> ProduceTickAsync(
         ConcurrentDictionary<Guid, SimulatedPriceTickDto> state,
         IProducer<string, string> producer,
         Random random,
         string topic,
+        ITickGenerationStrategy strategy,
         CancellationToken cancellationToken)
     {
-    var selected = state.Values.ElementAt(random.Next(state.Count));
-    var delta = Math.Round((decimal)(random.NextDouble() * 6 - 3), 2);
-    var nextPrice = Math.Max(1m, selected.MarketPrice + delta);
-    var updatedAt = DateTime.UtcNow;
+        var nextTick = strategy.GenerateNext(state.Values.ToArray(), random);
+        state[nextTick.InstrumentId] = nextTick;
 
-    var nextTick = selected with
-    {
-        MarketPrice = nextPrice,
-        LastUpdatedAtUtc = updatedAt
-    };
+        var tickEvent = new PriceTickEvent(nextTick.InstrumentId, nextTick.Ticker, nextTick.MarketPrice, nextTick.LastUpdatedAtUtc);
+        var payload = JsonSerializer.Serialize(tickEvent);
 
-    state[nextTick.InstrumentId] = nextTick;
+        const int maxAttempts = 60;
 
-    var tickEvent = new PriceTickEvent(nextTick.InstrumentId, nextTick.Ticker, nextTick.MarketPrice, nextTick.LastUpdatedAtUtc);
-    var payload = JsonSerializer.Serialize(tickEvent);
-
-    const int maxAttempts = 60;
-
-    for (var attempt = 1; attempt <= maxAttempts; attempt++)
-    {
-        try
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            var delivery = await producer.ProduceAsync(topic, new Message<string, string>
+            try
             {
-                Key = nextTick.InstrumentId.ToString(),
-                Value = payload
-            }, cancellationToken);
-
-            return Results.Ok(new
-            {
-                Tick = nextTick,
-                Kafka = new
+                var delivery = await producer.ProduceAsync(topic, new Message<string, string>
                 {
-                    delivery.Topic,
-                    Partition = delivery.Partition.Value,
-                    Offset = delivery.Offset.Value,
-                    Attempts = attempt
-                }
-            });
+                    Key = nextTick.InstrumentId.ToString(),
+                    Value = payload
+                }, cancellationToken);
+
+                return Results.Ok(new
+                {
+                    Tick = nextTick,
+                    Strategy = strategy.Name,
+                    Kafka = new
+                    {
+                        delivery.Topic,
+                        Partition = delivery.Partition.Value,
+                        Offset = delivery.Offset.Value,
+                        Attempts = attempt
+                    }
+                });
+            }
+            catch (ProduceException<string, string>) when (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            }
+            catch (KafkaException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            }
         }
-        catch (ProduceException<string, string>) when (attempt < maxAttempts)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
-        }
-        catch (KafkaException) when (attempt < maxAttempts)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
-        }
-    }
 
         return Results.Problem("Kafka is still unavailable after several retry attempts.");
     }
 }
 
-sealed record AutoTickerOptions(string Topic, bool Enabled, int IntervalSeconds);
+sealed record AutoTickerOptions(
+    string Topic,
+    bool Enabled,
+    int IntervalSeconds,
+    ITickGenerationStrategy Strategy,
+    IReadOnlyCollection<string> AvailableStrategyNames);
 
 sealed class AutoTickWorker : BackgroundService
 {
@@ -148,7 +164,7 @@ sealed class AutoTickWorker : BackgroundService
         {
             try
             {
-                await TickPublisher.ProduceRandomTickAsync(_state, producer, _random, _options.Topic, stoppingToken);
+                await TickPublisher.ProduceTickAsync(_state, producer, _random, _options.Topic, _options.Strategy, stoppingToken);
             }
             catch (OperationCanceledException)
             {

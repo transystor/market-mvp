@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketMvp.Bff")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8b610e6f48ab8f02343ad01962a3776eeb7775f9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+41cfaa6554d2594ad1d239584ac272d90f45f790")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketMvp.Bff")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketMvp.Bff")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

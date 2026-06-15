@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketMvp.PriceProjectionSe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketMvp.MarketDataIngestor", "src\MarketMvp.MarketDataIngestor\MarketMvp.MarketDataIngestor.csproj", "{CC1D2192-44DA-4EBC-9425-52A7DD6AE136}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketMvp.PortfolioValuationService", "src\MarketMvp.PortfolioValuationService\MarketMvp.PortfolioValuationService.csproj", "{491CE21A-29DE-4B72-8FEC-58E2795B1EAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,6 +58,10 @@ Global
 		{CC1D2192-44DA-4EBC-9425-52A7DD6AE136}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC1D2192-44DA-4EBC-9425-52A7DD6AE136}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC1D2192-44DA-4EBC-9425-52A7DD6AE136}.Release|Any CPU.Build.0 = Release|Any CPU
+		{491CE21A-29DE-4B72-8FEC-58E2795B1EAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{491CE21A-29DE-4B72-8FEC-58E2795B1EAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{491CE21A-29DE-4B72-8FEC-58E2795B1EAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{491CE21A-29DE-4B72-8FEC-58E2795B1EAF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{46152A52-CA5F-4F5D-8070-8D31EC9D49CC} = {BDF62CDF-8295-44E1-8951-3F8EC4199588}
@@ -65,5 +71,6 @@ Global
 		{D64E2514-1572-4413-B5DF-5524E6357EA1} = {BDF62CDF-8295-44E1-8951-3F8EC4199588}
 		{27002D7C-6020-40A4-9A6B-7E13257DF147} = {BDF62CDF-8295-44E1-8951-3F8EC4199588}
 		{CC1D2192-44DA-4EBC-9425-52A7DD6AE136} = {BDF62CDF-8295-44E1-8951-3F8EC4199588}
+		{491CE21A-29DE-4B72-8FEC-58E2795B1EAF} = {BDF62CDF-8295-44E1-8951-3F8EC4199588}
 	EndGlobalSection
 EndGlobal

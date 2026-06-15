@@ -25,7 +25,7 @@
 - `src/MarketMvp.PortfolioService` - счета и позиции
 - `src/MarketMvp.InstrumentService` - справочник инструментов
 - `src/MarketMvp.PriceProjectionService` - current price projection
-- `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков и auto-ticker
+- `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков, auto-ticker, Strategy/Factory для генерации тиков
 - `src/MarketMvp.PortfolioValuationService` - valuation и account summary read models по счёту
 - `src/MarketMvp.Bff` - UI-агрегатор
 - `src/MarketMvp.Contracts` - DTO-контракты
@@ -196,7 +196,7 @@ docker compose up --build
 - Kafka broker для хоста: `localhost:9092`
 - Kafka broker внутри docker network: `kafka:9092`
 
-Авто-тикер по умолчанию включён, интервал задаётся через `AUTO_TICK_INTERVAL_SECONDS`.
+Авто-тикер по умолчанию включён, интервал задаётся через `AUTO_TICK_INTERVAL_SECONDS`, а стратегия генерации тиков через `AUTO_TICK_STRATEGY` (`random-walk`, `trend-up`, `volatile`).
 
 ## Полезные endpoints
 
@@ -220,6 +220,7 @@ docker compose up --build
 
 ### MarketDataIngestor
 - `GET /ticks`
+- `GET /tick-strategies`
 - `POST /simulate-tick`
 
 ## Локальный запуск без Docker
@@ -247,6 +248,7 @@ npm run dev
 - UI пока сидит на polling, не на WebSocket/SignalR
 - нагрузочный режим ещё не выделен отдельно
 - часть данных всё ещё seeded/mock-like
+- pattern-oriented рефакторинг пока сделан точечно, а не по всей системе
 
 ## Нагрузочный demo-path
 
