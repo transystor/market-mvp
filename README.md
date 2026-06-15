@@ -8,7 +8,7 @@
 - `src/MarketMvp.PortfolioService` - счета и позиции
 - `src/MarketMvp.InstrumentService` - справочник инструментов
 - `src/MarketMvp.PriceProjectionService` - текущие рыночные цены
-- `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков
+- `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков и авто-тикер
 - `src/MarketMvp.PortfolioValuationService` - valuation read model по счёту
 - `src/MarketMvp.Bff` - UI-агрегатор
 - Kafka + ZooKeeper в docker-compose для event-driven потока цен
@@ -48,6 +48,7 @@ docker compose up --build
 - InstrumentService Swagger: `http://localhost:5103/swagger`
 - PriceProjectionService Swagger: `http://localhost:5104/swagger`
 - MarketDataIngestor Swagger: `http://localhost:5105/swagger`
+- Авто-тикер по умолчанию включён, интервал задаётся через `AUTO_TICK_INTERVAL_SECONDS`
 - Kafka broker для хоста: `localhost:9092`
 - Kafka broker внутри docker network: `kafka:9092`
 - Redis: `localhost:6379`
@@ -70,6 +71,6 @@ npm run dev
 
 ## Следующие шаги
 
-- сделать фоновый авто-тикер вместо ручного simulate endpoint
 - добавить Kafka UI
 - добавить более чистую Redis-backed valuation cache по account summary
+- добавить диагностические endpoints по lag/cache/runtime состоянию

@@ -86,6 +86,8 @@ services:
         condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AUTO_TICK_ENABLED: "true"
+      AUTO_TICK_INTERVAL_SECONDS: "3"
     ports:
       - "5105:8080"
 
