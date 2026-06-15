@@ -30,6 +30,12 @@ services:
     ports:
       - "9092:29092"
 
+  redis:
+    image: redis:7-alpine
+    container_name: market-mvp-redis
+    ports:
+      - "6379:6379"
+
   client-service:
     build:
       context: .
@@ -62,8 +68,11 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_CONNECTION_STRING: redis:6379
     ports:
       - "5104:8080"
 

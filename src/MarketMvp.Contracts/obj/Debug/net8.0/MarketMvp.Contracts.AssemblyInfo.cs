@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketMvp.Contracts")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4df8c3e2a694f50c60ccc27da840336a81a79ae4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8d26023ab43030ce7870ed0f2e0f75d66dd08ca6")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketMvp.Contracts")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketMvp.Contracts")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
