@@ -8,6 +8,7 @@
 - `src/MarketMvp.PortfolioService` - счета и позиции
 - `src/MarketMvp.InstrumentService` - справочник инструментов
 - `src/MarketMvp.PriceProjectionService` - текущие рыночные цены
+- `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков
 - `src/MarketMvp.Bff` - UI-агрегатор
 - `src/MarketMvp.Contracts` - DTO-контракты
 - `ui/` - React UI
@@ -20,7 +21,7 @@
 - карточка инструмента с текущей рыночной ценой
 - отдельная страница со списком инструментов и текущими ценами
 
-Сейчас данные пока seeded/mock, но уже разнесены по отдельным сервисам, а BFF агрегирует их по HTTP.
+Сейчас данные уже разнесены по отдельным сервисам, BFF агрегирует их по HTTP, а цены можно шевелить через `MarketDataIngestor`.
 
 ## Запуск через Docker
 
@@ -36,6 +37,7 @@ docker compose up --build
 - PortfolioService Swagger: `http://localhost:5102/swagger`
 - InstrumentService Swagger: `http://localhost:5103/swagger`
 - PriceProjectionService Swagger: `http://localhost:5104/swagger`
+- MarketDataIngestor Swagger: `http://localhost:5105/swagger`
 
 ## Локальный запуск без Docker
 
@@ -54,7 +56,6 @@ npm run dev
 
 ## Следующие шаги
 
-- добавить `market-data-ingestor`
 - перевести поток цен на Kafka
-- сделать live price updates вместо статических seed values
+- сделать фоновый авто-тикер вместо ручного simulate endpoint
 - затем усилить read-path через Redis и live updates
