@@ -39,7 +39,8 @@ docker compose up --build
 - InstrumentService Swagger: `http://localhost:5103/swagger`
 - PriceProjectionService Swagger: `http://localhost:5104/swagger`
 - MarketDataIngestor Swagger: `http://localhost:5105/swagger`
-- Kafka broker: `localhost:9092`
+- Kafka broker для хоста: `localhost:9092`
+- Kafka broker внутри docker network: `kafka:9092`
 
 ## Локальный запуск без Docker
 
