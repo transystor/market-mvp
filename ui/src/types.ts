@@ -16,6 +16,9 @@ export type AccountPosition = {
   averagePrice: number
   purchaseDate: string
   marketPrice: number
+  marketValue: number
+  unrealizedPnl: number
+  unrealizedPnlPercent: number
   lastUpdatedAtUtc: string
 }
 

@@ -75,6 +75,11 @@ app.MapGet("/ui/accounts/{accountId:guid}/positions", async (Guid accountId, IHt
         var instrument = instrumentMap[position.InstrumentId];
         var price = priceMap[position.InstrumentId];
 
+        var marketValue = position.Quantity * price.MarketPrice;
+        var costBasis = position.Quantity * position.AveragePrice;
+        var unrealizedPnl = marketValue - costBasis;
+        var unrealizedPnlPercent = costBasis == 0 ? 0 : Math.Round(unrealizedPnl / costBasis * 100, 2);
+
         return new UiAccountPositionDto(
             position.InstrumentId,
             instrument.Ticker,
@@ -83,6 +88,9 @@ app.MapGet("/ui/accounts/{accountId:guid}/positions", async (Guid accountId, IHt
             position.AveragePrice,
             position.PurchaseDate,
             price.MarketPrice,
+            marketValue,
+            unrealizedPnl,
+            unrealizedPnlPercent,
             price.LastUpdatedAtUtc);
     });
 

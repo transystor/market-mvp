@@ -68,6 +68,10 @@ select {
   gap: 20px;
 }
 
+.wide-grid {
+  grid-template-columns: 320px minmax(0, 1.5fr) minmax(280px, 0.9fr);
+}
+
 .card {
   background: #111b2f;
   border: 1px solid #22324d;
@@ -143,6 +147,18 @@ tbody tr {
 
 tbody tr:hover {
   background: #16233b;
+}
+
+.positive {
+  color: #4ade80;
+}
+
+.negative {
+  color: #f87171;
+}
+
+.neutral {
+  color: #cbd5e1;
 }
 
 .instrument-details {

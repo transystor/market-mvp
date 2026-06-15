@@ -12,6 +12,9 @@ public sealed record UiAccountPositionDto(
     decimal AveragePrice,
     DateOnly PurchaseDate,
     decimal MarketPrice,
+    decimal MarketValue,
+    decimal UnrealizedPnl,
+    decimal UnrealizedPnlPercent,
     DateTime LastUpdatedAtUtc);
 
 public sealed record UiInstrumentListItemDto(

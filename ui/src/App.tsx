@@ -17,6 +17,12 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString('ru-RU')
 }
 
+function getPnlClass(value: number) {
+  if (value > 0) return 'positive'
+  if (value < 0) return 'negative'
+  return 'neutral'
+}
+
 function App() {
   const [page, setPage] = useState<Page>('portfolio')
   const [clients, setClients] = useState<Client[]>([])
@@ -81,6 +87,22 @@ function App() {
       .catch(() => setError('Не удалось загрузить карточку инструмента'))
   }, [selectedInstrumentId])
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      api.getInstruments().then(setInstruments).catch(() => undefined)
+
+      if (selectedAccountId) {
+        api.getPositions(selectedAccountId).then(setPositions).catch(() => undefined)
+      }
+
+      if (selectedInstrumentId) {
+        api.getInstrument(selectedInstrumentId).then(setInstrumentDetails).catch(() => undefined)
+      }
+    }, 3000)
+
+    return () => window.clearInterval(intervalId)
+  }, [selectedAccountId, selectedInstrumentId])
+
   const selectedClient = useMemo(
     () => clients.find((client) => client.id === selectedClientId) ?? null,
     [clients, selectedClientId],
@@ -110,7 +132,7 @@ function App() {
       {error ? <div className="error">{error}</div> : null}
 
       {page === 'portfolio' ? (
-        <section className="grid">
+        <section className="grid wide-grid">
           <div className="card controls">
             <h2>Выбор клиента и счёта</h2>
             <label>
@@ -158,6 +180,9 @@ function App() {
                   <th>Средняя цена</th>
                   <th>Дата покупки</th>
                   <th>Рынок</th>
+                  <th>Value</th>
+                  <th>PnL</th>
+                  <th>PnL %</th>
                 </tr>
               </thead>
               <tbody>
@@ -169,6 +194,9 @@ function App() {
                     <td>{position.averagePrice}</td>
                     <td>{position.purchaseDate}</td>
                     <td>{position.marketPrice}</td>
+                    <td>{position.marketValue.toFixed(2)}</td>
+                    <td className={getPnlClass(position.unrealizedPnl)}>{position.unrealizedPnl.toFixed(2)}</td>
+                    <td className={getPnlClass(position.unrealizedPnlPercent)}>{position.unrealizedPnlPercent.toFixed(2)}%</td>
                   </tr>
                 ))}
               </tbody>
