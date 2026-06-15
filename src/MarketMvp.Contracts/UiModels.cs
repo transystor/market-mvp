@@ -4,6 +4,13 @@ public sealed record UiClientDto(Guid Id, string Name);
 
 public sealed record UiAccountDto(Guid Id, string AccountNumber);
 
+public sealed record UiAccountSummaryDto(
+    Guid AccountId,
+    decimal TotalMarketValue,
+    decimal TotalUnrealizedPnl,
+    int PositionsCount,
+    DateTime UpdatedAtUtc);
+
 public sealed record UiAccountPositionDto(
     Guid InstrumentId,
     string Ticker,

@@ -62,6 +62,24 @@ app.MapGet("/ui/clients/{clientId:guid}/accounts", async (Guid clientId, IHttpCl
         : Results.Ok(result.Select(x => new UiAccountDto(x.Id, x.AccountNumber)));
 });
 
+app.MapGet("/ui/accounts/{accountId:guid}/summary", async (Guid accountId, IHttpClientFactory httpClientFactory) =>
+{
+    var valuationClient = httpClientFactory.CreateClient("valuations");
+    var summary = await valuationClient.GetFromJsonAsync<AccountSummaryDto>($"/account-summaries/{accountId}");
+
+    if (summary is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(new UiAccountSummaryDto(
+        summary.AccountId,
+        summary.TotalMarketValue,
+        summary.TotalUnrealizedPnl,
+        summary.PositionsCount,
+        summary.UpdatedAtUtc));
+});
+
 app.MapGet("/ui/accounts/{accountId:guid}/positions", async (Guid accountId, IHttpClientFactory httpClientFactory) =>
 {
     var valuationClient = httpClientFactory.CreateClient("valuations");

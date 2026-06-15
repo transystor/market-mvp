@@ -9,7 +9,7 @@
 - `src/MarketMvp.InstrumentService` - справочник инструментов
 - `src/MarketMvp.PriceProjectionService` - текущие рыночные цены
 - `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков и авто-тикер
-- `src/MarketMvp.PortfolioValuationService` - valuation read model по счёту
+- `src/MarketMvp.PortfolioValuationService` - valuation и account summary read models по счёту
 - `src/MarketMvp.Bff` - UI-агрегатор
 - Kafka + ZooKeeper в docker-compose для event-driven потока цен
 - Kafka UI для просмотра topic, offsets и consumer groups
@@ -21,6 +21,7 @@
 
 - выбор клиента
 - выбор счёта клиента
+- summary по счёту (total value, total pnl, positions count)
 - таблица позиций по счёту
 - карточка инструмента с текущей рыночной ценой
 - отдельная страница со списком инструментов и текущими ценами
@@ -73,6 +74,6 @@ npm run dev
 
 ## Следующие шаги
 
-- добавить более чистую Redis-backed valuation cache по account summary
-- добавить account summary read model
+- убрать жёстко зашитый список clientIds из valuation worker
 - при желании перейти с polling на WebSocket/SignalR
+- добавить отдельный нагрузочный сценарий для lag/throughput демонстрации

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { api } from './api'
-import type { Account, AccountPosition, Client, InstrumentDetails, InstrumentListItem } from './types'
+import type { Account, AccountPosition, AccountSummary, Client, InstrumentDetails, InstrumentListItem } from './types'
 
 type Page = 'portfolio' | 'instruments'
 
@@ -28,6 +28,7 @@ function App() {
   const [clients, setClients] = useState<Client[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [positions, setPositions] = useState<AccountPosition[]>([])
+  const [accountSummary, setAccountSummary] = useState<AccountSummary | null>(null)
   const [instruments, setInstruments] = useState<InstrumentListItem[]>([])
   const [selectedClientId, setSelectedClientId] = useState('')
   const [selectedAccountId, setSelectedAccountId] = useState('')
@@ -68,12 +69,19 @@ function App() {
   useEffect(() => {
     if (!selectedAccountId) {
       setPositions([])
+      setAccountSummary(null)
       return
     }
 
-    api.getPositions(selectedAccountId)
-      .then(setPositions)
-      .catch(() => setError('Не удалось загрузить позиции по счёту'))
+    Promise.all([
+      api.getAccountSummary(selectedAccountId),
+      api.getPositions(selectedAccountId),
+    ])
+      .then(([summary, positionData]) => {
+        setAccountSummary(summary)
+        setPositions(positionData)
+      })
+      .catch(() => setError('Не удалось загрузить данные по счёту'))
   }, [selectedAccountId])
 
   useEffect(() => {
@@ -92,6 +100,7 @@ function App() {
       api.getInstruments().then(setInstruments).catch(() => undefined)
 
       if (selectedAccountId) {
+        api.getAccountSummary(selectedAccountId).then(setAccountSummary).catch(() => undefined)
         api.getPositions(selectedAccountId).then(setPositions).catch(() => undefined)
       }
 
@@ -164,7 +173,17 @@ function App() {
               </div>
               <div>
                 <span>Позиций</span>
-                <strong>{positions.length}</strong>
+                <strong>{accountSummary?.positionsCount ?? positions.length}</strong>
+              </div>
+              <div>
+                <span>Total Value</span>
+                <strong>{accountSummary ? accountSummary.totalMarketValue.toFixed(2) : '0.00'}</strong>
+              </div>
+              <div>
+                <span>Total PnL</span>
+                <strong className={accountSummary ? getPnlClass(accountSummary.totalUnrealizedPnl) : 'neutral'}>
+                  {accountSummary ? accountSummary.totalUnrealizedPnl.toFixed(2) : '0.00'}
+                </strong>
               </div>
             </div>
           </div>

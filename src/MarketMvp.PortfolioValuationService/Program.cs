@@ -41,6 +41,18 @@ app.MapGet("/valuations/{accountId:guid}", async (Guid accountId) =>
     return snapshot is null ? Results.NotFound() : Results.Ok(snapshot);
 });
 
+app.MapGet("/account-summaries/{accountId:guid}", async (Guid accountId) =>
+{
+    var value = await redisDb.StringGetAsync($"valuation-summary:{accountId}");
+    if (!value.HasValue)
+    {
+        return Results.NotFound();
+    }
+
+    var summary = JsonSerializer.Deserialize<AccountSummaryDto>(value!);
+    return summary is null ? Results.NotFound() : Results.Ok(summary);
+});
+
 app.MapGet("/diagnostics", () => Results.Ok(new
 {
     diagnostics.StartedAtUtc,
@@ -138,6 +150,15 @@ sealed class PortfolioValuationRefreshWorker : BackgroundService
                             valuationPositions);
 
                         await redisDb.StringSetAsync($"valuation:{account.Id}", JsonSerializer.Serialize(snapshot));
+
+                        var summary = new AccountSummaryDto(
+                            account.Id,
+                            snapshot.TotalMarketValue,
+                            snapshot.TotalUnrealizedPnl,
+                            snapshot.Positions.Count,
+                            snapshot.CalculatedAtUtc);
+
+                        await redisDb.StringSetAsync($"valuation-summary:{account.Id}", JsonSerializer.Serialize(summary));
                         _diagnostics.LastSuccessfulAccountId = account.Id;
                     }
 

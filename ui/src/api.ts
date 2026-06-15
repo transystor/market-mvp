@@ -1,4 +1,4 @@
-import type { Account, AccountPosition, Client, InstrumentDetails, InstrumentListItem } from './types'
+import type { Account, AccountPosition, AccountSummary, Client, InstrumentDetails, InstrumentListItem } from './types'
 
 const API_BASE = 'http://localhost:5032'
 
@@ -15,6 +15,7 @@ async function getJson<T>(path: string): Promise<T> {
 export const api = {
   getClients: () => getJson<Client[]>('/ui/clients'),
   getAccounts: (clientId: string) => getJson<Account[]>(`/ui/clients/${clientId}/accounts`),
+  getAccountSummary: (accountId: string) => getJson<AccountSummary>(`/ui/accounts/${accountId}/summary`),
   getPositions: (accountId: string) => getJson<AccountPosition[]>(`/ui/accounts/${accountId}/positions`),
   getInstruments: () => getJson<InstrumentListItem[]>('/ui/instruments'),
   getInstrument: (instrumentId: string) => getJson<InstrumentDetails>(`/ui/instruments/${instrumentId}`),

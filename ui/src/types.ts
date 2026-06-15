@@ -8,6 +8,14 @@ export type Account = {
   accountNumber: string
 }
 
+export type AccountSummary = {
+  accountId: string
+  totalMarketValue: number
+  totalUnrealizedPnl: number
+  positionsCount: number
+  updatedAtUtc: string
+}
+
 export type AccountPosition = {
   instrumentId: string
   ticker: string
