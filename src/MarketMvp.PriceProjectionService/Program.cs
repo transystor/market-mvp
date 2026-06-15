@@ -98,11 +98,11 @@ sealed class KafkaPriceConsumer : BackgroundService
                 }
                 catch (ConsumeException)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
                 }
                 catch (KafkaException)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {

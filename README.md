@@ -30,6 +30,13 @@
 docker compose up --build
 ```
 
+Если до этого уже был старый kafka-state, лучше один раз пересоздать стек так:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
 После старта будет доступно:
 - UI: `http://localhost:5173`
 - BFF API: `http://localhost:5032`

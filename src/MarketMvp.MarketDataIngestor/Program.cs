@@ -59,7 +59,7 @@ app.MapPost("/simulate-tick", async () =>
     var tickEvent = new PriceTickEvent(nextTick.InstrumentId, nextTick.Ticker, nextTick.MarketPrice, nextTick.LastUpdatedAtUtc);
     var payload = JsonSerializer.Serialize(tickEvent);
 
-    const int maxAttempts = 10;
+    const int maxAttempts = 60;
 
     for (var attempt = 1; attempt <= maxAttempts; attempt++)
     {
@@ -85,11 +85,11 @@ app.MapPost("/simulate-tick", async () =>
         }
         catch (ProduceException<string, string>) when (attempt < maxAttempts)
         {
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(3));
         }
         catch (KafkaException) when (attempt < maxAttempts)
         {
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(3));
         }
     }
 
