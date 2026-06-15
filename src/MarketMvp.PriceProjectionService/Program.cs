@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
+using Confluent.Kafka;
 using MarketMvp.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,13 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "kafka:9092";
+const string topic = "market.price-ticks";
+const string groupId = "price-projection-service";
 
 var now = DateTime.UtcNow;
 
@@ -25,6 +23,16 @@ var prices = new ConcurrentDictionary<Guid, MarketPriceDto>(new[]
     new KeyValuePair<Guid, MarketPriceDto>(Guid.Parse("f5555555-5555-5555-5555-555555555555"), new MarketPriceDto(Guid.Parse("f5555555-5555-5555-5555-555555555555"), 319.80m, now.AddSeconds(-5)))
 });
 
+builder.Services.AddHostedService(_ => new KafkaPriceConsumer(prices, kafkaBootstrapServers, topic, groupId));
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 app.MapGet("/prices", () => Results.Ok(prices.Values.OrderBy(x => x.InstrumentId)));
 app.MapGet("/prices/{instrumentId:guid}", (Guid instrumentId) =>
 {
@@ -33,16 +41,64 @@ app.MapGet("/prices/{instrumentId:guid}", (Guid instrumentId) =>
         : Results.NotFound();
 });
 
-app.MapPut("/prices/{instrumentId:guid}", (Guid instrumentId, PriceUpdateRequest request) =>
+app.Run();
+
+sealed class KafkaPriceConsumer : BackgroundService
 {
-    if (instrumentId != request.InstrumentId)
+    private readonly ConcurrentDictionary<Guid, MarketPriceDto> _prices;
+    private readonly string _bootstrapServers;
+    private readonly string _topic;
+    private readonly string _groupId;
+
+    public KafkaPriceConsumer(ConcurrentDictionary<Guid, MarketPriceDto> prices, string bootstrapServers, string topic, string groupId)
     {
-        return Results.BadRequest();
+        _prices = prices;
+        _bootstrapServers = bootstrapServers;
+        _topic = topic;
+        _groupId = groupId;
     }
 
-    var updated = new MarketPriceDto(request.InstrumentId, request.MarketPrice, request.LastUpdatedAtUtc);
-    prices[instrumentId] = updated;
-    return Results.Ok(updated);
-});
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.Run(() =>
+        {
+            var config = new ConsumerConfig
+            {
+                BootstrapServers = _bootstrapServers,
+                GroupId = _groupId,
+                AutoOffsetReset = AutoOffsetReset.Earliest,
+                EnableAutoCommit = false
+            };
 
-app.Run();
+            using var consumer = new ConsumerBuilder<string, string>(config).Build();
+            consumer.Subscribe(_topic);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    var result = consumer.Consume(stoppingToken);
+                    var tick = JsonSerializer.Deserialize<PriceTickEvent>(result.Message.Value);
+
+                    if (tick is null)
+                    {
+                        continue;
+                    }
+
+                    _prices[tick.InstrumentId] = new MarketPriceDto(
+                        tick.InstrumentId,
+                        tick.MarketPrice,
+                        tick.LastUpdatedAtUtc);
+
+                    consumer.Commit(result);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+
+            consumer.Close();
+        }, stoppingToken);
+    }
+}

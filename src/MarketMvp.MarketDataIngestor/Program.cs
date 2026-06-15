@@ -1,13 +1,11 @@
+using System.Text.Json;
+using Confluent.Kafka;
 using MarketMvp.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHttpClient("price-service", client =>
-{
-    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PRICE_SERVICE_URL") ?? "http://price-service:8080");
-});
 
 var app = builder.Build();
 
@@ -16,6 +14,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "kafka:9092";
+const string topic = "market.price-ticks";
+
+var producerConfig = new ProducerConfig
+{
+    BootstrapServers = kafkaBootstrapServers,
+    ClientId = "market-data-ingestor",
+    EnableIdempotence = true,
+    Acks = Acks.All
+};
 
 var random = new Random();
 
@@ -28,9 +37,11 @@ var priceState = new Dictionary<Guid, SimulatedPriceTickDto>
     [Guid.Parse("f5555555-5555-5555-5555-555555555555")] = new(Guid.Parse("f5555555-5555-5555-5555-555555555555"), "SBER", 319.80m, DateTime.UtcNow)
 };
 
+using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
+
 app.MapGet("/ticks", () => Results.Ok(priceState.Values.OrderBy(x => x.Ticker)));
 
-app.MapPost("/simulate-tick", async (IHttpClientFactory httpClientFactory) =>
+app.MapPost("/simulate-tick", async () =>
 {
     var selected = priceState.Values.ElementAt(random.Next(priceState.Count));
     var delta = Math.Round((decimal)(random.NextDouble() * 6 - 3), 2);
@@ -45,11 +56,25 @@ app.MapPost("/simulate-tick", async (IHttpClientFactory httpClientFactory) =>
 
     priceState[nextTick.InstrumentId] = nextTick;
 
-    var priceService = httpClientFactory.CreateClient("price-service");
-    var response = await priceService.PutAsJsonAsync($"/prices/{nextTick.InstrumentId}", new PriceUpdateRequest(nextTick.InstrumentId, nextTick.MarketPrice, nextTick.LastUpdatedAtUtc));
-    response.EnsureSuccessStatusCode();
+    var tickEvent = new PriceTickEvent(nextTick.InstrumentId, nextTick.Ticker, nextTick.MarketPrice, nextTick.LastUpdatedAtUtc);
+    var payload = JsonSerializer.Serialize(tickEvent);
 
-    return Results.Ok(nextTick);
+    var delivery = await producer.ProduceAsync(topic, new Message<string, string>
+    {
+        Key = nextTick.InstrumentId.ToString(),
+        Value = payload
+    });
+
+    return Results.Ok(new
+    {
+        Tick = nextTick,
+        Kafka = new
+        {
+            delivery.Topic,
+            Partition = delivery.Partition.Value,
+            Offset = delivery.Offset.Value
+        }
+    });
 });
 
 app.Run();

@@ -10,6 +10,7 @@
 - `src/MarketMvp.PriceProjectionService` - текущие рыночные цены
 - `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков
 - `src/MarketMvp.Bff` - UI-агрегатор
+- Kafka + ZooKeeper в docker-compose для event-driven потока цен
 - `src/MarketMvp.Contracts` - DTO-контракты
 - `ui/` - React UI
 
@@ -21,7 +22,7 @@
 - карточка инструмента с текущей рыночной ценой
 - отдельная страница со списком инструментов и текущими ценами
 
-Сейчас данные уже разнесены по отдельным сервисам, BFF агрегирует их по HTTP, а цены можно шевелить через `MarketDataIngestor`.
+Сейчас данные уже разнесены по отдельным сервисам, BFF агрегирует их по HTTP, а поток цен идёт через Kafka: `MarketDataIngestor -> Kafka -> PriceProjectionService`.
 
 ## Запуск через Docker
 
@@ -38,6 +39,7 @@ docker compose up --build
 - InstrumentService Swagger: `http://localhost:5103/swagger`
 - PriceProjectionService Swagger: `http://localhost:5104/swagger`
 - MarketDataIngestor Swagger: `http://localhost:5105/swagger`
+- Kafka broker: `localhost:9092`
 
 ## Локальный запуск без Docker
 
@@ -56,6 +58,6 @@ npm run dev
 
 ## Следующие шаги
 
-- перевести поток цен на Kafka
 - сделать фоновый авто-тикер вместо ручного simulate endpoint
+- добавить Kafka UI
 - затем усилить read-path через Redis и live updates
