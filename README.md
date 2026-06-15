@@ -12,6 +12,7 @@
 - `src/MarketMvp.PortfolioValuationService` - valuation read model по счёту
 - `src/MarketMvp.Bff` - UI-агрегатор
 - Kafka + ZooKeeper в docker-compose для event-driven потока цен
+- Kafka UI для просмотра topic, offsets и consumer groups
 - Redis для хранения hot current prices
 - `src/MarketMvp.Contracts` - DTO-контракты
 - `ui/` - React UI
@@ -52,6 +53,7 @@ docker compose up --build
 - Kafka broker для хоста: `localhost:9092`
 - Kafka broker внутри docker network: `kafka:9092`
 - Redis: `localhost:6379`
+- Kafka UI: `http://localhost:8081`
 - PortfolioValuationService Swagger: `http://localhost:5106/swagger`
 
 ## Локальный запуск без Docker
@@ -71,6 +73,6 @@ npm run dev
 
 ## Следующие шаги
 
-- добавить Kafka UI
 - добавить более чистую Redis-backed valuation cache по account summary
-- добавить диагностические endpoints по lag/cache/runtime состоянию
+- добавить account summary read model
+- при желании перейти с polling на WebSocket/SignalR

@@ -16,10 +16,12 @@ builder.Services.AddHttpClient("portfolio", client => client.BaseAddress = new U
 builder.Services.AddHttpClient("instruments", client => client.BaseAddress = new Uri(instrumentServiceUrl));
 builder.Services.AddHttpClient("prices", client => client.BaseAddress = new Uri(priceServiceUrl));
 
+var diagnostics = new ValuationDiagnostics(DateTime.UtcNow);
 var redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
 var redisDb = redis.GetDatabase();
 
 builder.Services.AddSingleton(redis);
+builder.Services.AddSingleton(diagnostics);
 builder.Services.AddHostedService<PortfolioValuationRefreshWorker>();
 
 var app = builder.Build();
@@ -39,17 +41,31 @@ app.MapGet("/valuations/{accountId:guid}", async (Guid accountId) =>
     return snapshot is null ? Results.NotFound() : Results.Ok(snapshot);
 });
 
+app.MapGet("/diagnostics", () => Results.Ok(new
+{
+    diagnostics.StartedAtUtc,
+    diagnostics.LastRefreshAtUtc,
+    diagnostics.LastSuccessfulAccountId,
+    diagnostics.CachedValuationsCount,
+    diagnostics.LastKnownPriceCount
+}));
+
 app.Run();
 
 sealed class PortfolioValuationRefreshWorker : BackgroundService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ConnectionMultiplexer _redis;
+    private readonly ValuationDiagnostics _diagnostics;
 
-    public PortfolioValuationRefreshWorker(IHttpClientFactory httpClientFactory, ConnectionMultiplexer redis)
+    public PortfolioValuationRefreshWorker(
+        IHttpClientFactory httpClientFactory,
+        ConnectionMultiplexer redis,
+        ValuationDiagnostics diagnostics)
     {
         _httpClientFactory = httpClientFactory;
         _redis = redis;
+        _diagnostics = diagnostics;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -85,6 +101,7 @@ sealed class PortfolioValuationRefreshWorker : BackgroundService
 
                     var instrumentMap = instruments.ToDictionary(x => x.InstrumentId);
                     var priceMap = prices.ToDictionary(x => x.InstrumentId);
+                    _diagnostics.LastKnownPriceCount = priceMap.Count;
 
                     foreach (var account in allAccounts)
                     {
@@ -121,7 +138,11 @@ sealed class PortfolioValuationRefreshWorker : BackgroundService
                             valuationPositions);
 
                         await redisDb.StringSetAsync($"valuation:{account.Id}", JsonSerializer.Serialize(snapshot));
+                        _diagnostics.LastSuccessfulAccountId = account.Id;
                     }
+
+                    _diagnostics.CachedValuationsCount = allAccounts.Count;
+                    _diagnostics.LastRefreshAtUtc = DateTime.UtcNow;
                 }
                 catch
                 {
@@ -132,4 +153,18 @@ sealed class PortfolioValuationRefreshWorker : BackgroundService
             }
         }, stoppingToken);
     }
+}
+
+sealed class ValuationDiagnostics
+{
+    public ValuationDiagnostics(DateTime startedAtUtc)
+    {
+        StartedAtUtc = startedAtUtc;
+    }
+
+    public DateTime StartedAtUtc { get; }
+    public DateTime? LastRefreshAtUtc { get; set; }
+    public Guid? LastSuccessfulAccountId { get; set; }
+    public int CachedValuationsCount { get; set; }
+    public int LastKnownPriceCount { get; set; }
 }

@@ -15,6 +15,7 @@ const string topic = "market.price-ticks";
 const string groupId = "price-projection-service";
 
 var now = DateTime.UtcNow;
+var diagnostics = new PriceProjectionDiagnostics(now);
 
 var inMemoryFallback = new ConcurrentDictionary<Guid, MarketPriceDto>(new[]
 {
@@ -24,6 +25,10 @@ var inMemoryFallback = new ConcurrentDictionary<Guid, MarketPriceDto>(new[]
     new KeyValuePair<Guid, MarketPriceDto>(Guid.Parse("f4444444-4444-4444-4444-444444444444"), new MarketPriceDto(Guid.Parse("f4444444-4444-4444-4444-444444444444"), 173.34m, now.AddSeconds(-4))),
     new KeyValuePair<Guid, MarketPriceDto>(Guid.Parse("f5555555-5555-5555-5555-555555555555"), new MarketPriceDto(Guid.Parse("f5555555-5555-5555-5555-555555555555"), 319.80m, now.AddSeconds(-5)))
 });
+
+diagnostics.CachedPricesCount = inMemoryFallback.Count;
+
+diagnostics.LastRedisSyncAtUtc = now;
 
 var redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
 var redisDb = redis.GetDatabase();
@@ -39,7 +44,8 @@ foreach (var item in inMemoryFallback.Values)
 
 builder.Services.AddSingleton(redis);
 builder.Services.AddSingleton(inMemoryFallback);
-builder.Services.AddHostedService(_ => new KafkaPriceConsumer(inMemoryFallback, redis, kafkaBootstrapServers, topic, groupId));
+builder.Services.AddSingleton(diagnostics);
+builder.Services.AddHostedService(_ => new KafkaPriceConsumer(inMemoryFallback, redis, diagnostics, kafkaBootstrapServers, topic, groupId));
 
 var app = builder.Build();
 
@@ -65,6 +71,7 @@ app.MapGet("/prices", async () =>
         }
     }
 
+    diagnostics.CachedPricesCount = result.Count;
     return Results.Ok(result.OrderBy(x => x.InstrumentId));
 });
 
@@ -80,12 +87,23 @@ app.MapGet("/prices/{instrumentId:guid}", async (Guid instrumentId) =>
     return price is null ? Results.NotFound() : Results.Ok(price);
 });
 
+app.MapGet("/diagnostics", () => Results.Ok(new
+{
+    diagnostics.ConsumerGroup,
+    diagnostics.Topic,
+    diagnostics.LastProcessedInstrumentId,
+    diagnostics.LastProcessedTickAtUtc,
+    diagnostics.LastRedisSyncAtUtc,
+    diagnostics.CachedPricesCount
+}));
+
 app.Run();
 
 sealed class KafkaPriceConsumer : BackgroundService
 {
     private readonly ConcurrentDictionary<Guid, MarketPriceDto> _fallback;
     private readonly ConnectionMultiplexer _redis;
+    private readonly PriceProjectionDiagnostics _diagnostics;
     private readonly string _bootstrapServers;
     private readonly string _topic;
     private readonly string _groupId;
@@ -93,15 +111,20 @@ sealed class KafkaPriceConsumer : BackgroundService
     public KafkaPriceConsumer(
         ConcurrentDictionary<Guid, MarketPriceDto> fallback,
         ConnectionMultiplexer redis,
+        PriceProjectionDiagnostics diagnostics,
         string bootstrapServers,
         string topic,
         string groupId)
     {
         _fallback = fallback;
         _redis = redis;
+        _diagnostics = diagnostics;
         _bootstrapServers = bootstrapServers;
         _topic = topic;
         _groupId = groupId;
+
+        _diagnostics.Topic = topic;
+        _diagnostics.ConsumerGroup = groupId;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -143,6 +166,11 @@ sealed class KafkaPriceConsumer : BackgroundService
                         _fallback[tick.InstrumentId] = updated;
                         await redisDb.StringSetAsync($"price:{tick.InstrumentId}", JsonSerializer.Serialize(updated));
 
+                        _diagnostics.LastProcessedInstrumentId = tick.InstrumentId;
+                        _diagnostics.LastProcessedTickAtUtc = tick.LastUpdatedAtUtc;
+                        _diagnostics.LastRedisSyncAtUtc = DateTime.UtcNow;
+                        _diagnostics.CachedPricesCount = _fallback.Count;
+
                         consumer.Commit(result);
                     }
                 }
@@ -165,4 +193,20 @@ sealed class KafkaPriceConsumer : BackgroundService
             }
         }, stoppingToken);
     }
+}
+
+sealed class PriceProjectionDiagnostics
+{
+    public PriceProjectionDiagnostics(DateTime startedAtUtc)
+    {
+        StartedAtUtc = startedAtUtc;
+    }
+
+    public DateTime StartedAtUtc { get; }
+    public string Topic { get; set; } = string.Empty;
+    public string ConsumerGroup { get; set; } = string.Empty;
+    public Guid? LastProcessedInstrumentId { get; set; }
+    public DateTime? LastProcessedTickAtUtc { get; set; }
+    public DateTime? LastRedisSyncAtUtc { get; set; }
+    public int CachedPricesCount { get; set; }
 }
