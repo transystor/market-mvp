@@ -248,10 +248,22 @@ npm run dev
 - нагрузочный режим ещё не выделен отдельно
 - часть данных всё ещё seeded/mock-like
 
+## Нагрузочный demo-path
+
+Отдельный outline для стресс-сценария лежит здесь:
+
+- `docs/load-test-outline.md`
+
+Там описано:
+- как ускорить поток тиков,
+- как дать burst через `simulate-tick`,
+- что смотреть в `Kafka UI`,
+- как читать diagnostics endpoints,
+- как объяснять bottlenecks.
+
 ## Логичные следующие шаги
 
 - убрать жёстко зашитый список `clientIds` из valuation worker
-- добавить отдельный нагрузочный сценарий для lag/throughput демонстрации
 - перейти с polling на WebSocket/SignalR
 - добавить более формальные metrics/observability hooks
 - позже, если нужно, добавить отдельный live push слой и более явную scale story
