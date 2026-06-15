@@ -1,0 +1,46 @@
+@startuml
+hide footbox
+
+title market-mvp, Sequence Diagram, Обновление цены и обновление портфельной витрины
+
+actor User
+participant UI
+participant BFF
+participant "MarketDataIngestor" as Ingestor
+queue Kafka
+participant "PriceProjectionService" as PriceProjection
+database Redis
+participant "PortfolioValuationService" as Valuation
+participant "PortfolioService" as Portfolio
+participant "InstrumentService" as Instruments
+
+== Поток рыночной цены ==
+Ingestor -> Kafka : publish PriceTickEvent
+Kafka -> PriceProjection : consume market.price-ticks
+PriceProjection -> Redis : SET price:{instrumentId}
+
+== Пересчёт valuation ==
+loop Каждые N секунд
+  Valuation -> Portfolio : GET /clients/{clientId}/accounts
+  Valuation -> Portfolio : GET /accounts/{accountId}/positions
+  Valuation -> Instruments : GET /instruments
+  Valuation -> PriceProjection : GET /prices
+  Valuation -> Redis : SET valuation:{accountId}
+  Valuation -> Redis : SET valuation-summary:{accountId}
+end
+
+== Чтение UI ==
+User -> UI : открывает экран портфеля
+UI -> BFF : GET /ui/accounts/{accountId}/summary
+BFF -> Valuation : GET /account-summaries/{accountId}
+Valuation -> Redis : GET valuation-summary:{accountId}
+Valuation --> BFF : AccountSummaryDto
+BFF --> UI : UiAccountSummaryDto
+
+UI -> BFF : GET /ui/accounts/{accountId}/positions
+BFF -> Valuation : GET /valuations/{accountId}
+Valuation -> Redis : GET valuation:{accountId}
+Valuation --> BFF : PortfolioValuationSnapshotDto
+BFF --> UI : UiAccountPositionDto[]
+
+@enduml

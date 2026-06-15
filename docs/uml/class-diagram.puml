@@ -1,0 +1,112 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+title market-mvp, Class Diagram, ключевые DTO и read models
+
+package "Contracts" {
+  class ClientDto {
+    +Guid Id
+    +string Name
+  }
+
+  class AccountDto {
+    +Guid Id
+    +string AccountNumber
+  }
+
+  class PortfolioPositionDto {
+    +Guid InstrumentId
+    +decimal Quantity
+    +decimal AveragePrice
+    +DateOnly PurchaseDate
+  }
+
+  class InstrumentDto {
+    +Guid InstrumentId
+    +string Ticker
+    +string Name
+    +string Type
+    +string Currency
+    +string Exchange
+    +string Isin
+  }
+
+  class PriceTickEvent {
+    +Guid InstrumentId
+    +string Ticker
+    +decimal MarketPrice
+    +DateTime LastUpdatedAtUtc
+  }
+
+  class MarketPriceDto {
+    +Guid InstrumentId
+    +decimal MarketPrice
+    +DateTime LastUpdatedAtUtc
+  }
+
+  class PortfolioValuationPositionDto {
+    +Guid InstrumentId
+    +string Ticker
+    +string InstrumentName
+    +decimal Quantity
+    +decimal AveragePrice
+    +DateOnly PurchaseDate
+    +decimal MarketPrice
+    +decimal MarketValue
+    +decimal UnrealizedPnl
+    +decimal UnrealizedPnlPercent
+    +DateTime LastUpdatedAtUtc
+  }
+
+  class PortfolioValuationSnapshotDto {
+    +Guid AccountId
+    +decimal TotalMarketValue
+    +decimal TotalUnrealizedPnl
+    +DateTime CalculatedAtUtc
+    +IReadOnlyCollection~PortfolioValuationPositionDto~ Positions
+  }
+
+  class AccountSummaryDto {
+    +Guid AccountId
+    +decimal TotalMarketValue
+    +decimal TotalUnrealizedPnl
+    +int PositionsCount
+    +DateTime UpdatedAtUtc
+  }
+
+  class UiAccountSummaryDto {
+    +Guid AccountId
+    +decimal TotalMarketValue
+    +decimal TotalUnrealizedPnl
+    +int PositionsCount
+    +DateTime UpdatedAtUtc
+  }
+
+  class UiAccountPositionDto {
+    +Guid InstrumentId
+    +string Ticker
+    +string InstrumentName
+    +decimal Quantity
+    +decimal AveragePrice
+    +DateOnly PurchaseDate
+    +decimal MarketPrice
+    +decimal MarketValue
+    +decimal UnrealizedPnl
+    +decimal UnrealizedPnlPercent
+    +DateTime LastUpdatedAtUtc
+  }
+}
+
+PortfolioValuationSnapshotDto "1" *-- "many" PortfolioValuationPositionDto
+ClientDto "1" -- "many" AccountDto
+AccountDto "1" -- "many" PortfolioPositionDto
+PortfolioPositionDto --> InstrumentDto : refers to InstrumentId
+PriceTickEvent --> MarketPriceDto : updates
+PortfolioValuationPositionDto --> PortfolioPositionDto : derived from
+PortfolioValuationPositionDto --> InstrumentDto : enriched by
+PortfolioValuationPositionDto --> MarketPriceDto : enriched by
+AccountSummaryDto ..> PortfolioValuationSnapshotDto : summarized from
+UiAccountSummaryDto ..> AccountSummaryDto : mapped from
+UiAccountPositionDto ..> PortfolioValuationPositionDto : mapped from
+
+@enduml

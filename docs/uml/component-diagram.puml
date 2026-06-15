@@ -1,0 +1,62 @@
+@startuml
+left to right direction
+skinparam componentStyle rectangle
+
+title market-mvp, Component Diagram
+
+package "Client Layer" {
+  [React UI] as UI
+}
+
+package "Facade Layer" {
+  [BFF] as BFF
+}
+
+package "Domain / Source Services" {
+  [ClientService] as ClientService
+  [PortfolioService] as PortfolioService
+  [InstrumentService] as InstrumentService
+}
+
+package "Streaming / Projection" {
+  [MarketDataIngestor] as Ingestor
+  [PriceProjectionService] as PriceProjection
+  [PortfolioValuationService] as Valuation
+  queue "Kafka\nmarket.price-ticks" as Kafka
+  database "Redis\nprice / valuation / summary" as Redis
+}
+
+package "Observability" {
+  [Kafka UI] as KafkaUI
+}
+
+UI --> BFF : UI DTO requests
+BFF --> ClientService : clients
+BFF --> PortfolioService : accounts
+BFF --> Valuation : summaries / valuations
+BFF --> InstrumentService : instrument details
+
+Ingestor --> Kafka : publish ticks
+Kafka --> PriceProjection : consume ticks
+PriceProjection --> Redis : current prices
+Valuation --> PortfolioService : positions
+Valuation --> InstrumentService : instruments
+Valuation --> PriceProjection : prices API
+Valuation --> Redis : valuation snapshots
+Valuation --> Redis : account summaries
+
+KafkaUI --> Kafka : inspect topic/groups
+UI ..> Redis : does not access directly
+BFF ..> Redis : does not access directly
+
+note right of BFF
+BFF не владеет бизнес-данными.
+Он фасад для UI.
+end note
+
+note bottom of Redis
+Redis хранит hot read state,
+а не source of truth.
+end note
+
+@enduml
