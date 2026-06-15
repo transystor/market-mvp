@@ -60,7 +60,7 @@ sealed class KafkaPriceConsumer : BackgroundService
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
             var config = new ConsumerConfig
             {
@@ -70,35 +70,49 @@ sealed class KafkaPriceConsumer : BackgroundService
                 EnableAutoCommit = false
             };
 
-            using var consumer = new ConsumerBuilder<string, string>(config).Build();
-            consumer.Subscribe(_topic);
-
             while (!stoppingToken.IsCancellationRequested)
             {
+                using var consumer = new ConsumerBuilder<string, string>(config).Build();
+
                 try
                 {
-                    var result = consumer.Consume(stoppingToken);
-                    var tick = JsonSerializer.Deserialize<PriceTickEvent>(result.Message.Value);
+                    consumer.Subscribe(_topic);
 
-                    if (tick is null)
+                    while (!stoppingToken.IsCancellationRequested)
                     {
-                        continue;
+                        var result = consumer.Consume(stoppingToken);
+                        var tick = JsonSerializer.Deserialize<PriceTickEvent>(result.Message.Value);
+
+                        if (tick is null)
+                        {
+                            continue;
+                        }
+
+                        _prices[tick.InstrumentId] = new MarketPriceDto(
+                            tick.InstrumentId,
+                            tick.MarketPrice,
+                            tick.LastUpdatedAtUtc);
+
+                        consumer.Commit(result);
                     }
-
-                    _prices[tick.InstrumentId] = new MarketPriceDto(
-                        tick.InstrumentId,
-                        tick.MarketPrice,
-                        tick.LastUpdatedAtUtc);
-
-                    consumer.Commit(result);
+                }
+                catch (ConsumeException)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                }
+                catch (KafkaException)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
                     break;
                 }
+                finally
+                {
+                    consumer.Close();
+                }
             }
-
-            consumer.Close();
         }, stoppingToken);
     }
 }

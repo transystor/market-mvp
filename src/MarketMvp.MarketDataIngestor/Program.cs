@@ -59,22 +59,41 @@ app.MapPost("/simulate-tick", async () =>
     var tickEvent = new PriceTickEvent(nextTick.InstrumentId, nextTick.Ticker, nextTick.MarketPrice, nextTick.LastUpdatedAtUtc);
     var payload = JsonSerializer.Serialize(tickEvent);
 
-    var delivery = await producer.ProduceAsync(topic, new Message<string, string>
-    {
-        Key = nextTick.InstrumentId.ToString(),
-        Value = payload
-    });
+    const int maxAttempts = 10;
 
-    return Results.Ok(new
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
     {
-        Tick = nextTick,
-        Kafka = new
+        try
         {
-            delivery.Topic,
-            Partition = delivery.Partition.Value,
-            Offset = delivery.Offset.Value
+            var delivery = await producer.ProduceAsync(topic, new Message<string, string>
+            {
+                Key = nextTick.InstrumentId.ToString(),
+                Value = payload
+            });
+
+            return Results.Ok(new
+            {
+                Tick = nextTick,
+                Kafka = new
+                {
+                    delivery.Topic,
+                    Partition = delivery.Partition.Value,
+                    Offset = delivery.Offset.Value,
+                    Attempts = attempt
+                }
+            });
         }
-    });
+        catch (ProduceException<string, string>) when (attempt < maxAttempts)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
+        catch (KafkaException) when (attempt < maxAttempts)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
+    }
+
+    return Results.Problem("Kafka is still unavailable after several retry attempts.");
 });
 
 app.Run();
