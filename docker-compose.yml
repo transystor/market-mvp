@@ -89,6 +89,24 @@ services:
     ports:
       - "5105:8080"
 
+  valuation-service:
+    build:
+      context: .
+      dockerfile: src/MarketMvp.PortfolioValuationService/Dockerfile
+    container_name: market-mvp-valuation-service
+    depends_on:
+      - portfolio-service
+      - instrument-service
+      - price-service
+      - redis
+    environment:
+      PORTFOLIO_SERVICE_URL: http://portfolio-service:8080
+      INSTRUMENT_SERVICE_URL: http://instrument-service:8080
+      PRICE_SERVICE_URL: http://price-service:8080
+      REDIS_CONNECTION_STRING: redis:6379
+    ports:
+      - "5106:8080"
+
   bff:
     build:
       context: .
@@ -99,11 +117,13 @@ services:
       - portfolio-service
       - instrument-service
       - price-service
+      - valuation-service
     environment:
       CLIENT_SERVICE_URL: http://client-service:8080
       PORTFOLIO_SERVICE_URL: http://portfolio-service:8080
       INSTRUMENT_SERVICE_URL: http://instrument-service:8080
       PRICE_SERVICE_URL: http://price-service:8080
+      VALUATION_SERVICE_URL: http://valuation-service:8080
     ports:
       - "5032:8080"
 

@@ -34,6 +34,11 @@ builder.Services.AddHttpClient("prices", client =>
     client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PRICE_SERVICE_URL") ?? "http://price-service:8080");
 });
 
+builder.Services.AddHttpClient("valuations", client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("VALUATION_SERVICE_URL") ?? "http://valuation-service:8080");
+});
+
 var app = builder.Build();
 
 app.UseSwagger();
@@ -59,40 +64,26 @@ app.MapGet("/ui/clients/{clientId:guid}/accounts", async (Guid clientId, IHttpCl
 
 app.MapGet("/ui/accounts/{accountId:guid}/positions", async (Guid accountId, IHttpClientFactory httpClientFactory) =>
 {
-    var portfolioClient = httpClientFactory.CreateClient("portfolio");
-    var instrumentClient = httpClientFactory.CreateClient("instruments");
-    var priceClient = httpClientFactory.CreateClient("prices");
+    var valuationClient = httpClientFactory.CreateClient("valuations");
+    var snapshot = await valuationClient.GetFromJsonAsync<PortfolioValuationSnapshotDto>($"/valuations/{accountId}");
 
-    var positions = await portfolioClient.GetFromJsonAsync<PortfolioPositionDto[]>($"/accounts/{accountId}/positions") ?? [];
-    var instruments = await instrumentClient.GetFromJsonAsync<InstrumentDto[]>("/instruments") ?? [];
-    var prices = await priceClient.GetFromJsonAsync<MarketPriceDto[]>("/prices") ?? [];
-
-    var instrumentMap = instruments.ToDictionary(x => x.InstrumentId);
-    var priceMap = prices.ToDictionary(x => x.InstrumentId);
-
-    var result = positions.Select(position =>
+    if (snapshot is null)
     {
-        var instrument = instrumentMap[position.InstrumentId];
-        var price = priceMap[position.InstrumentId];
+        return Results.NotFound();
+    }
 
-        var marketValue = position.Quantity * price.MarketPrice;
-        var costBasis = position.Quantity * position.AveragePrice;
-        var unrealizedPnl = marketValue - costBasis;
-        var unrealizedPnlPercent = costBasis == 0 ? 0 : Math.Round(unrealizedPnl / costBasis * 100, 2);
-
-        return new UiAccountPositionDto(
-            position.InstrumentId,
-            instrument.Ticker,
-            instrument.Name,
-            position.Quantity,
-            position.AveragePrice,
-            position.PurchaseDate,
-            price.MarketPrice,
-            marketValue,
-            unrealizedPnl,
-            unrealizedPnlPercent,
-            price.LastUpdatedAtUtc);
-    });
+    var result = snapshot.Positions.Select(position => new UiAccountPositionDto(
+        position.InstrumentId,
+        position.Ticker,
+        position.InstrumentName,
+        position.Quantity,
+        position.AveragePrice,
+        position.PurchaseDate,
+        position.MarketPrice,
+        position.MarketValue,
+        position.UnrealizedPnl,
+        position.UnrealizedPnlPercent,
+        position.LastUpdatedAtUtc));
 
     return Results.Ok(result);
 });

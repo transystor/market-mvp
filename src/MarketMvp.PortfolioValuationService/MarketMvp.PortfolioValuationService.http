@@ -1,0 +1,6 @@
+@MarketMvp.PortfolioValuationService_HostAddress = http://localhost:5210
+
+GET {{MarketMvp.PortfolioValuationService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
