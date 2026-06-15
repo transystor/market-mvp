@@ -27,11 +27,8 @@ builder.Services.AddHostedService(_ => new KafkaPriceConsumer(prices, kafkaBoots
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapGet("/prices", () => Results.Ok(prices.Values.OrderBy(x => x.InstrumentId)));
 app.MapGet("/prices/{instrumentId:guid}", (Guid instrumentId) =>
