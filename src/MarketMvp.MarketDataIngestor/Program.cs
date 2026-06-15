@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 using Confluent.Kafka;
 using MarketMvp.Contracts;
+using MarketMvp.MarketDataIngestor;
+using MarketMvp.MarketDataIngestor.Commands;
 using MarketMvp.MarketDataIngestor.TickGeneration;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,7 +26,6 @@ var producerConfig = new ProducerConfig
     Acks = Acks.All
 };
 
-var random = new Random();
 var priceState = new ConcurrentDictionary<Guid, SimulatedPriceTickDto>(new[]
 {
     new KeyValuePair<Guid, SimulatedPriceTickDto>(Guid.Parse("f1111111-1111-1111-1111-111111111111"), new(Guid.Parse("f1111111-1111-1111-1111-111111111111"), "AAPL", 213.42m, DateTime.UtcNow)),
@@ -46,6 +46,7 @@ builder.Services.AddSingleton(sp =>
     var factory = sp.GetRequiredService<TickGenerationStrategyFactory>();
     return new AutoTickerOptions(topic, autoTickEnabled, autoTickIntervalSeconds, factory.Create(strategyName), factory.GetAvailableNames());
 });
+builder.Services.AddSingleton<ISimulateTickCommand, SimulateTickCommand>();
 builder.Services.AddHostedService<AutoTickWorker>();
 
 var app = builder.Build();
@@ -61,93 +62,29 @@ app.MapGet("/tick-strategies", (AutoTickerOptions options) => Results.Ok(new
     Available = options.AvailableStrategyNames
 }));
 
-app.MapPost("/simulate-tick", async (
-    ConcurrentDictionary<Guid, SimulatedPriceTickDto> state,
-    ProducerConfig config,
-    AutoTickerOptions options) =>
+app.MapPost("/simulate-tick", async (ISimulateTickCommand command, CancellationToken cancellationToken) =>
 {
-    using var producer = new ProducerBuilder<string, string>(config).Build();
-    return await TickPublisher.ProduceTickAsync(state, producer, random, topic, options.Strategy, CancellationToken.None);
+    try
+    {
+        var result = await command.ExecuteAsync(cancellationToken);
+        return Results.Ok(result);
+    }
+    catch (InvalidOperationException exception)
+    {
+        return Results.Problem(exception.Message);
+    }
 });
 
 app.Run();
 
-static class TickPublisher
-{
-    public static async Task<IResult> ProduceTickAsync(
-        ConcurrentDictionary<Guid, SimulatedPriceTickDto> state,
-        IProducer<string, string> producer,
-        Random random,
-        string topic,
-        ITickGenerationStrategy strategy,
-        CancellationToken cancellationToken)
-    {
-        var nextTick = strategy.GenerateNext(state.Values.ToArray(), random);
-        state[nextTick.InstrumentId] = nextTick;
-
-        var tickEvent = new PriceTickEvent(nextTick.InstrumentId, nextTick.Ticker, nextTick.MarketPrice, nextTick.LastUpdatedAtUtc);
-        var payload = JsonSerializer.Serialize(tickEvent);
-
-        const int maxAttempts = 60;
-
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                var delivery = await producer.ProduceAsync(topic, new Message<string, string>
-                {
-                    Key = nextTick.InstrumentId.ToString(),
-                    Value = payload
-                }, cancellationToken);
-
-                return Results.Ok(new
-                {
-                    Tick = nextTick,
-                    Strategy = strategy.Name,
-                    Kafka = new
-                    {
-                        delivery.Topic,
-                        Partition = delivery.Partition.Value,
-                        Offset = delivery.Offset.Value,
-                        Attempts = attempt
-                    }
-                });
-            }
-            catch (ProduceException<string, string>) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
-            }
-            catch (KafkaException) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
-            }
-        }
-
-        return Results.Problem("Kafka is still unavailable after several retry attempts.");
-    }
-}
-
-sealed record AutoTickerOptions(
-    string Topic,
-    bool Enabled,
-    int IntervalSeconds,
-    ITickGenerationStrategy Strategy,
-    IReadOnlyCollection<string> AvailableStrategyNames);
-
 sealed class AutoTickWorker : BackgroundService
 {
-    private readonly ConcurrentDictionary<Guid, SimulatedPriceTickDto> _state;
-    private readonly ProducerConfig _config;
+    private readonly ISimulateTickCommand _command;
     private readonly AutoTickerOptions _options;
-    private readonly Random _random = new();
 
-    public AutoTickWorker(
-        ConcurrentDictionary<Guid, SimulatedPriceTickDto> state,
-        ProducerConfig config,
-        AutoTickerOptions options)
+    public AutoTickWorker(ISimulateTickCommand command, AutoTickerOptions options)
     {
-        _state = state;
-        _config = config;
+        _command = command;
         _options = options;
     }
 
@@ -158,13 +95,11 @@ sealed class AutoTickWorker : BackgroundService
             return;
         }
 
-        using var producer = new ProducerBuilder<string, string>(_config).Build();
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await TickPublisher.ProduceTickAsync(_state, producer, _random, _options.Topic, _options.Strategy, stoppingToken);
+                await _command.ExecuteAsync(stoppingToken);
             }
             catch (OperationCanceledException)
             {

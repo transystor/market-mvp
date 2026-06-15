@@ -25,8 +25,8 @@
 - `src/MarketMvp.PortfolioService` - счета и позиции
 - `src/MarketMvp.InstrumentService` - справочник инструментов
 - `src/MarketMvp.PriceProjectionService` - current price projection
-- `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков, auto-ticker, Strategy/Factory для генерации тиков
-- `src/MarketMvp.PortfolioValuationService` - valuation и account summary read models по счёту
+- `src/MarketMvp.MarketDataIngestor` - симулятор рыночных тиков, auto-ticker, Strategy/Factory/Command для генерации и публикации тиков
+- `src/MarketMvp.PortfolioValuationService` - valuation и account summary read models по счёту, плюс Command для ручного refresh
 - `src/MarketMvp.Bff` - UI-агрегатор
 - `src/MarketMvp.Contracts` - DTO-контракты
 - `ui/` - React UI
@@ -216,6 +216,7 @@ docker compose up --build
 ### PortfolioValuationService
 - `GET /valuations/{accountId}`
 - `GET /account-summaries/{accountId}`
+- `POST /refresh-valuations`
 - `GET /diagnostics`
 
 ### MarketDataIngestor
@@ -249,6 +250,7 @@ npm run dev
 - нагрузочный режим ещё не выделен отдельно
 - часть данных всё ещё seeded/mock-like
 - pattern-oriented рефакторинг пока сделан точечно, а не по всей системе
+- valuation worker всё ещё знает список clientIds заранее
 
 ## Нагрузочный demo-path
 
